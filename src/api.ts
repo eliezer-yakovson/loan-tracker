@@ -1,5 +1,6 @@
 import type { AppState, Loan, MonthEntry } from './types';
 import { makeEntryKey } from './utils';
+import { logError } from './errorLogApi';
 
 const API_BASE = import.meta.env.VITE_API_URL ?? '/api';
 
@@ -134,19 +135,41 @@ function appStateToApiStateIn(state: AppState): ApiStateIn {
 // ── API calls ─────────────────────────────────────────────────────────────────
 
 export async function pullState(selectedMonth: string): Promise<AppState> {
-  const res = await fetch(`${API_BASE}/sync?selected_month=${encodeURIComponent(selectedMonth)}`, {
-    headers: authHeaders(),
-  });
-  if (!res.ok) throw new Error(`Pull failed: ${res.status}`);
-  const data: ApiStateOut = await res.json();
-  return apiStateToAppState(data);
+  try {
+    const res = await fetch(`${API_BASE}/sync?selected_month=${encodeURIComponent(selectedMonth)}`, {
+      headers: authHeaders(),
+    });
+    if (!res.ok) {
+      const err = `Pull failed: ${res.status}`;
+      await logError('sync/pull', err, { status: res.status, month: selectedMonth });
+      throw new Error(err);
+    }
+    const data: ApiStateOut = await res.json();
+    return apiStateToAppState(data);
+  } catch (e) {
+    if (!(e instanceof Error && e.message.startsWith('Pull failed'))) {
+      await logError('sync/pull', String(e), { month: selectedMonth });
+    }
+    throw e;
+  }
 }
 
 export async function pushState(state: AppState): Promise<void> {
-  const res = await fetch(`${API_BASE}/sync`, {
-    method: 'POST',
-    headers: authHeaders(),
-    body: JSON.stringify(appStateToApiStateIn(state)),
-  });
-  if (!res.ok) throw new Error(`Push failed: ${res.status}`);
+  try {
+    const res = await fetch(`${API_BASE}/sync`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(appStateToApiStateIn(state)),
+    });
+    if (!res.ok) {
+      const err = `Push failed: ${res.status}`;
+      await logError('sync/push', err, { status: res.status });
+      throw new Error(err);
+    }
+  } catch (e) {
+    if (!(e instanceof Error && e.message.startsWith('Push failed'))) {
+      await logError('sync/push', String(e));
+    }
+    throw e;
+  }
 }

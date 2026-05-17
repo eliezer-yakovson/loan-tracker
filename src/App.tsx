@@ -21,6 +21,7 @@ import RegisterPage from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import UserDashboardPage from './pages/UserDashboardPage';
 import AdminPage from './pages/AdminPage';
+import ErrorLogPage from './pages/ErrorLogPage';
 
 function LoanTrackerLogo() {
   return (
@@ -75,6 +76,7 @@ export default function App() {
     pathname.startsWith('/manage') ? 'manage' :
     pathname.startsWith('/history') ? 'history' :
     pathname.startsWith('/admin') ? 'admin' :
+    pathname.startsWith('/errors') ? 'errors' :
     pathname.startsWith('/user') ? 'user' : 'dashboard';
 
   const historyLoanId = pathname.startsWith('/history/')
@@ -106,8 +108,40 @@ export default function App() {
     setState((s) => ensureMonthEntries(s, monthKey));
   }
 
+  const [initialCategoryId, setInitialCategoryId] = useState<string | null>(null);
+
   function addCategory(category: Category) {
     setState((s) => ({ ...s, categories: [...s.categories, category] }));
+  }
+
+  function deleteCategory(categoryId: string) {
+    setState((s) => {
+      const loans = s.loans.filter((l) => l.categoryId !== categoryId);
+      const deletedLoanIds = new Set(
+        s.loans.filter((l) => l.categoryId === categoryId).map((l) => l.id),
+      );
+      const monthEntries = Object.fromEntries(
+        Object.entries(s.monthEntries).filter(([, e]) => !deletedLoanIds.has(e.loanId)),
+      );
+      return {
+        ...s,
+        categories: s.categories.filter((c) => c.id !== categoryId),
+        loans,
+        monthEntries,
+      };
+    });
+  }
+
+  function updateCategory(updated: Category) {
+    setState((s) => ({
+      ...s,
+      categories: s.categories.map((c) => (c.id === updated.id ? updated : c)),
+    }));
+  }
+
+  function handleCategoryCreated(categoryId: string) {
+    setInitialCategoryId(categoryId);
+    navigate('/loans');
   }
 
   function addLoan(loan: Loan) {
@@ -268,6 +302,16 @@ export default function App() {
               🛡 אדמין
             </button>
           )}
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activePage === 'errors'}
+            className={activePage === 'errors' ? 'nav-tab active' : 'nav-tab'}
+            onClick={() => { setActivePage('errors'); setMenuOpen(false); }}
+            title="לוג שגיאות"
+          >
+            ⚠️ שגיאות
+          </button>
         </div>
       </nav>
 
@@ -300,6 +344,8 @@ export default function App() {
             onAmountChange={handleAmountChange}
             onInstallmentChange={handleInstallmentChange}
             onNavigateManage={() => setActivePage('manage')}
+            initialCategoryId={initialCategoryId}
+            onInitialCategoryConsumed={() => setInitialCategoryId(null)}
           />
         )}
 
@@ -307,9 +353,14 @@ export default function App() {
           <ManagePage
             state={state}
             onAddCategory={addCategory}
+            onDeleteCategory={deleteCategory}
+            onUpdateCategory={updateCategory}
+            onCategoryCreated={handleCategoryCreated}
             onSelectMonth={handleSelectMonth}
           />
         )}
+
+        {activePage === 'errors' && <ErrorLogPage />}
 
         {activePage === 'history' && (
           <HistoryPage

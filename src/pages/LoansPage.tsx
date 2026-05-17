@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
 import type { AppState, Category, Loan, LoanFormState, MonthEntry } from '../types';
 import {
   makeEntryKey,
@@ -18,6 +18,8 @@ interface Props {
   onAmountChange: (loanId: string, value: string) => void;
   onInstallmentChange: (loanId: string, totalPayments: number, value: string) => void;
   onNavigateManage: () => void;
+  initialCategoryId?: string | null;
+  onInitialCategoryConsumed?: () => void;
 }
 
 export default function LoansPage({
@@ -29,12 +31,31 @@ export default function LoansPage({
   onAmountChange,
   onInstallmentChange,
   onNavigateManage,
+  initialCategoryId,
+  onInitialCategoryConsumed,
 }: Props) {
   const [loanFormCategoryId, setLoanFormCategoryId] = useState<string | null>(null);
   const [loanForm, setLoanForm] = useState<LoanFormState>(() =>
     createLoanForm(state.selectedMonth),
   );
   const [expandedLoans, setExpandedLoans] = useState<Record<string, boolean>>({});
+
+  // Auto-open loan form for a newly created category
+  useEffect(() => {
+    if (initialCategoryId) {
+      setLoanFormCategoryId(initialCategoryId);
+      setLoanForm(createLoanForm(state.selectedMonth));
+      onInitialCategoryConsumed?.();
+      // Scroll to form
+      window.setTimeout(() => {
+        document.getElementById(`loan-form-${initialCategoryId}`)?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+      }, 100);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialCategoryId]);
 
   const categoriesById = Object.fromEntries(state.categories.map((c) => [c.id, c]));
 
@@ -200,7 +221,11 @@ export default function LoansPage({
             </header>
 
             {loanFormCategoryId === col.category.id ? (
-              <form className="loan-form" onSubmit={handleAddLoanSubmit}>
+              <form
+                id={`loan-form-${col.category.id}`}
+                className="loan-form"
+                onSubmit={handleAddLoanSubmit}
+              >
                 <div className="loan-form-grid">
                   <label className="field-block">
                     <span>שם ההלוואה</span>
