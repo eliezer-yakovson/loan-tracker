@@ -1,4 +1,6 @@
-// Auth API client — all calls go through the Vite proxy at /api
+// Auth API client — in dev uses Vite proxy (/api), in prod uses VITE_API_URL
+
+const API_BASE = import.meta.env.VITE_API_URL ?? '/api';
 
 export interface TokenResponse {
   access_token: string;
@@ -10,7 +12,7 @@ export interface TokenResponse {
 }
 
 async function authFetch<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`/api${path}`, {
+  const res = await fetch(`${API_BASE}${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -59,7 +61,7 @@ export async function resetVerify(email: string, code: string): Promise<TokenRes
 // ── Current user ──────────────────────────────────────────────────────────────
 
 export async function fetchMe(token: string): Promise<{ id: string; email: string; name: string; created_at: string }> {
-  const res = await fetch('/api/auth/me', {
+  const res = await fetch(`${API_BASE}/auth/me`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error('Unauthorized');
@@ -105,7 +107,7 @@ export interface AdminUser {
 }
 
 export async function fetchAdminUsers(token: string): Promise<AdminUser[]> {
-  const res = await fetch('/api/admin/users', {
+  const res = await fetch(`${API_BASE}/admin/users`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error('אין הרשאה');
@@ -113,7 +115,7 @@ export async function fetchAdminUsers(token: string): Promise<AdminUser[]> {
 }
 
 export async function toggleUserActive(token: string, userId: string): Promise<{ id: string; is_active: boolean }> {
-  const res = await fetch(`/api/admin/users/${userId}/toggle-active`, {
+  const res = await fetch(`${API_BASE}/admin/users/${userId}/toggle-active`, {
     method: 'PATCH',
     headers: { Authorization: `Bearer ${token}` },
   });

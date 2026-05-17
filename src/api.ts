@@ -1,6 +1,8 @@
 import type { AppState, Loan, MonthEntry } from './types';
 import { makeEntryKey } from './utils';
 
+const API_BASE = import.meta.env.VITE_API_URL ?? '/api';
+
 // ── Wire types (backend snake_case) ───────────────────────────────────────────
 
 interface ApiLoan {
@@ -125,14 +127,14 @@ function appStateToApiStateIn(state: AppState): ApiStateIn {
 // ── API calls ─────────────────────────────────────────────────────────────────
 
 export async function pullState(selectedMonth: string): Promise<AppState> {
-  const res = await fetch(`/api/sync?selected_month=${encodeURIComponent(selectedMonth)}`);
+  const res = await fetch(`${API_BASE}/sync?selected_month=${encodeURIComponent(selectedMonth)}`);
   if (!res.ok) throw new Error(`Pull failed: ${res.status}`);
   const data: ApiStateOut = await res.json();
   return apiStateToAppState(data);
 }
 
 export async function pushState(state: AppState): Promise<void> {
-  const res = await fetch('/api/sync', {
+  const res = await fetch(`${API_BASE}/sync`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(appStateToApiStateIn(state)),
