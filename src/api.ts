@@ -3,6 +3,13 @@ import { makeEntryKey } from './utils';
 
 const API_BASE = import.meta.env.VITE_API_URL ?? '/api';
 
+function authHeaders(): Record<string, string> {
+  const token = localStorage.getItem('auth_token');
+  return token
+    ? { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
+    : { 'Content-Type': 'application/json' };
+}
+
 // ── Wire types (backend snake_case) ───────────────────────────────────────────
 
 interface ApiLoan {
@@ -127,7 +134,9 @@ function appStateToApiStateIn(state: AppState): ApiStateIn {
 // ── API calls ─────────────────────────────────────────────────────────────────
 
 export async function pullState(selectedMonth: string): Promise<AppState> {
-  const res = await fetch(`${API_BASE}/sync?selected_month=${encodeURIComponent(selectedMonth)}`);
+  const res = await fetch(`${API_BASE}/sync?selected_month=${encodeURIComponent(selectedMonth)}`, {
+    headers: authHeaders(),
+  });
   if (!res.ok) throw new Error(`Pull failed: ${res.status}`);
   const data: ApiStateOut = await res.json();
   return apiStateToAppState(data);
@@ -136,7 +145,7 @@ export async function pullState(selectedMonth: string): Promise<AppState> {
 export async function pushState(state: AppState): Promise<void> {
   const res = await fetch(`${API_BASE}/sync`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders(),
     body: JSON.stringify(appStateToApiStateIn(state)),
   });
   if (!res.ok) throw new Error(`Push failed: ${res.status}`);
