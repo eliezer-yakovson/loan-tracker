@@ -44,6 +44,9 @@ export default function LoginPage({ onLogin, onGoRegister, onGoForgot }: Props) 
     setLoading(true);
     try {
       const res = await loginSendOtp(email.trim().toLowerCase());
+      setDevCode(res.dev_code ?? '');
+      setStep('code');
+      setResendCooldown(RESEND_COOLDOWN_SECS);
     } catch (err) {
       setError((err as Error).message);
     } finally {
