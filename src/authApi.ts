@@ -73,13 +73,16 @@ export async function fetchMe(token: string): Promise<{ id: string; email: strin
 const TOKEN_KEY = 'auth_token';
 const USER_KEY = 'auth_user';
 
+// Use sessionStorage for the auth token so it is cleared automatically when the
+// browser tab / window closes — reduces exposure on shared computers.
+// Non-sensitive display fields (name, email) stay in localStorage for convenience.
 export function saveSession(token: string, user: { userId: string; email: string; name: string; isAdmin?: boolean }) {
-  localStorage.setItem(TOKEN_KEY, token);
+  sessionStorage.setItem(TOKEN_KEY, token);
   localStorage.setItem(USER_KEY, JSON.stringify(user));
 }
 
 export function loadSession(): { token: string; userId: string; email: string; name: string; isAdmin?: boolean } | null {
-  const token = localStorage.getItem(TOKEN_KEY);
+  const token = sessionStorage.getItem(TOKEN_KEY);
   const raw = localStorage.getItem(USER_KEY);
   if (!token || !raw) return null;
   try {
@@ -91,7 +94,7 @@ export function loadSession(): { token: string; userId: string; email: string; n
 }
 
 export function clearSession() {
-  localStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
 }
 

@@ -10,7 +10,7 @@ import {
   getPreviousMonthKey,
   getNextMonthKey,
 } from './utils';
-import { pullState, pushState } from './api';
+import { pullState, pushState, deleteCategoryApi, deleteLoanApi } from './api';
 import { loadSession, clearSession } from './authApi';
 import DashboardPage from './pages/DashboardPage';
 import LoansPage from './pages/LoansPage';
@@ -57,8 +57,18 @@ export default function App() {
   const apiOnline = useRef(false);   // pull succeeded at least once
   const justPulled = useRef(false);  // skip push right after a pull
 
-  // Pull full state from API on mount
+  // Pull full state from API whenever the authenticated user changes (login / session restore).
+  // Skipped entirely when there is no session — no point hitting an auth-guarded endpoint.
   useEffect(() => {
+    if (!authUser) {
+      // No session: mark sync as ready (allow local pushes later) and go offline.
+      syncReady.current = true;
+      apiOnline.current = false;
+      return;
+    }
+    // Reset flags so we don't push stale data while the pull is in flight.
+    syncReady.current = false;
+    apiOnline.current = false;
     pullState(state.selectedMonth)
       .then((apiState) => {
         apiOnline.current = true;
@@ -67,8 +77,9 @@ export default function App() {
       })
       .catch(console.error)
       .finally(() => { syncReady.current = true; });
+  // authUser.userId triggers a fresh pull on every login, not just on mount.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [authUser?.userId]);
 
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -132,6 +143,10 @@ export default function App() {
         monthEntries,
       };
     });
+    // Cascade delete on the server (loans + their month_entries are deleted via FK cascade)
+    if (apiOnline.current) {
+      deleteCategoryApi(categoryId).catch(console.error);
+    }
   }
 
   function updateCategory(updated: Category) {
@@ -158,6 +173,10 @@ export default function App() {
       }
       return { ...s, loans: s.loans.filter((l) => l.id !== loanId), monthEntries };
     });
+    // Delete on the server (month_entries are deleted via FK cascade)
+    if (apiOnline.current) {
+      deleteLoanApi(loanId).catch(console.error);
+    }
   }
 
   function updateLoan(updated: Loan) {
@@ -202,6 +221,15 @@ export default function App() {
       confirmed: true,
       manuallyEdited: true,
     }));
+  }
+
+  function handleLogout() {
+    // Clear the cached financial data so a different user logging in on the same
+    // device cannot see a previous user's data even briefly before the pull completes.
+    window.localStorage.removeItem(STORAGE_KEY);
+    clearSession();
+    setState(loadState()); // returns empty initial state now that STORAGE_KEY is gone
+    setAuthUser(null);
   }
 
   // ── Auth gate ───────────────────────────────────────────────────────────────
@@ -335,7 +363,7 @@ export default function App() {
           <UserDashboardPage
             user={authUser}
             state={state}
-            onLogout={() => setAuthUser(null)}
+            onLogout={handleLogout}
           />
         )}
         {activePage === 'admin' && authUser.isAdmin && (

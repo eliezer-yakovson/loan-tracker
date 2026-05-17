@@ -5,7 +5,8 @@ import { logError } from './errorLogApi';
 const API_BASE = import.meta.env.VITE_API_URL ?? '/api';
 
 function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem('auth_token');
+  // Token lives in sessionStorage (moved from localStorage for shared-computer safety)
+  const token = sessionStorage.getItem('auth_token');
   return token
     ? { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
     : { 'Content-Type': 'application/json' };
@@ -171,5 +172,26 @@ export async function pushState(state: AppState): Promise<void> {
       await logError('sync/push', String(e));
     }
     throw e;
+  }
+}
+
+export async function deleteCategoryApi(categoryId: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/categories/${encodeURIComponent(categoryId)}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  // 404 means it was already gone — treat as success
+  if (!res.ok && res.status !== 404) {
+    throw new Error(`Delete category failed: ${res.status}`);
+  }
+}
+
+export async function deleteLoanApi(loanId: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/loans/${encodeURIComponent(loanId)}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  if (!res.ok && res.status !== 404) {
+    throw new Error(`Delete loan failed: ${res.status}`);
   }
 }

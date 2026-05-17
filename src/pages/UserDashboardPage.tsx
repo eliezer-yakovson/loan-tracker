@@ -22,7 +22,6 @@ export default function UserDashboardPage({ user, state, onLogout }: Props) {
     .toUpperCase();
 
   function handleLogout() {
-    clearSession();
     onLogout();
   }
 
