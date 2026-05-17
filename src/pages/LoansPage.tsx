@@ -39,6 +39,10 @@ export default function LoansPage({
     createLoanForm(state.selectedMonth),
   );
   const [expandedLoans, setExpandedLoans] = useState<Record<string, boolean>>({});
+  const [editingLoanId, setEditingLoanId] = useState<string | null>(null);
+  const [editLoanForm, setEditLoanForm] = useState<LoanFormState>(() =>
+    createLoanForm(state.selectedMonth),
+  );
 
   // Auto-open loan form for a newly created category
   useEffect(() => {
@@ -147,6 +151,56 @@ export default function LoansPage({
 
   function handleToggleFreeze(loan: Loan) {
     onUpdateLoan({ ...loan, isFrozen: !loan.isFrozen });
+  }
+
+  function startEditLoan(loan: Loan) {
+    setEditingLoanId(loan.id);
+    setEditLoanForm({
+      name: loan.name,
+      lenderName: loan.lenderName,
+      originalAmount: String(loan.originalAmount),
+      monthlyAmount: String(loan.monthlyAmount),
+      totalPayments: String(loan.totalPayments),
+      partialPercentage: String(loan.partialPercentage),
+      takenDate: loan.takenDate,
+      monthlyDueDay: String(loan.monthlyDueDay),
+      notes: loan.notes,
+    });
+  }
+
+  function handleSaveEditLoan(loan: Loan) {
+    const trimmedName = editLoanForm.name.trim();
+    const originalAmount = Number(editLoanForm.originalAmount);
+    const monthlyAmount = Number(editLoanForm.monthlyAmount);
+    const totalPayments = Number(editLoanForm.totalPayments);
+    const monthlyDueDay = clamp(Number(editLoanForm.monthlyDueDay || '1'), 1, 31);
+    const partialPercentage = clamp(Number(editLoanForm.partialPercentage || '100'), 1, 100);
+    if (
+      !trimmedName ||
+      !editLoanForm.takenDate ||
+      !Number.isFinite(originalAmount) ||
+      originalAmount <= 0 ||
+      !Number.isFinite(monthlyAmount) ||
+      monthlyAmount <= 0 ||
+      !Number.isFinite(totalPayments) ||
+      totalPayments <= 0
+    ) {
+      window.alert('יש למלא את כל שדות החובה עם ערכים תקינים.');
+      return;
+    }
+    onUpdateLoan({
+      ...loan,
+      name: trimmedName,
+      lenderName: editLoanForm.lenderName.trim() || loan.lenderName,
+      originalAmount,
+      monthlyAmount,
+      totalPayments: Math.round(totalPayments),
+      takenDate: editLoanForm.takenDate,
+      monthlyDueDay,
+      notes: editLoanForm.notes.trim(),
+      partialPercentage,
+    });
+    setEditingLoanId(null);
   }
 
   return (
@@ -423,9 +477,34 @@ export default function LoansPage({
                         <button
                           type="button"
                           className="ghost-button"
-                          onClick={() => toggleExpandedLoan(loan.id)}
+                          onClick={() => {
+                            if (editingLoanId === loan.id) {
+                              setEditingLoanId(null);
+                            } else {
+                              toggleExpandedLoan(loan.id);
+                            }
+                          }}
                         >
-                          {expandedLoans[loan.id] ? 'סגירת פרטים' : 'פרטים נוספים'}
+                          {editingLoanId === loan.id
+                            ? 'סגירה'
+                            : expandedLoans[loan.id]
+                            ? 'סגירת פרטים'
+                            : 'פרטים נוספים'}
+                        </button>
+                        <button
+                          type="button"
+                          className="secondary-button"
+                          onClick={() => {
+                            if (editingLoanId === loan.id) {
+                              setEditingLoanId(null);
+                            } else {
+                              startEditLoan(loan);
+                              setExpandedLoans((s) => ({ ...s, [loan.id]: false }));
+                            }
+                          }}
+                          title="עריכת פרטי הלוואה"
+                        >
+                          ✏️ עריכה
                         </button>
                         <button
                           type="button"
@@ -445,7 +524,107 @@ export default function LoansPage({
                         </button>
                       </div>
 
-                      {expandedLoans[loan.id] ? (
+                      {editingLoanId === loan.id ? (
+                        <div className="loan-form loan-edit-form">
+                          <div className="loan-form-grid">
+                            <label className="field-block">
+                              <span>שם ההלוואה</span>
+                              <input
+                                type="text"
+                                value={editLoanForm.name}
+                                onChange={(e) => setEditLoanForm((f) => ({ ...f, name: e.target.value }))}
+                              />
+                            </label>
+                            <label className="field-block">
+                              <span>שם המלווה</span>
+                              <input
+                                type="text"
+                                value={editLoanForm.lenderName}
+                                onChange={(e) => setEditLoanForm((f) => ({ ...f, lenderName: e.target.value }))}
+                              />
+                            </label>
+                            <label className="field-block">
+                              <span>סכום הלוואה מקורי</span>
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={editLoanForm.originalAmount}
+                                onChange={(e) => setEditLoanForm((f) => ({ ...f, originalAmount: e.target.value }))}
+                              />
+                            </label>
+                            <label className="field-block">
+                              <span>חיוב חודשי בסיסי</span>
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={editLoanForm.monthlyAmount}
+                                onChange={(e) => setEditLoanForm((f) => ({ ...f, monthlyAmount: e.target.value }))}
+                              />
+                            </label>
+                            <label className="field-block">
+                              <span>סה"כ תשלומים</span>
+                              <input
+                                type="number"
+                                value={editLoanForm.totalPayments}
+                                onChange={(e) => setEditLoanForm((f) => ({ ...f, totalPayments: e.target.value }))}
+                              />
+                            </label>
+                            <label className="field-block">
+                              <span>אחוז חלקי (1–100%)</span>
+                              <input
+                                type="number"
+                                min="1"
+                                max="100"
+                                step="1"
+                                value={editLoanForm.partialPercentage}
+                                onChange={(e) => setEditLoanForm((f) => ({ ...f, partialPercentage: e.target.value }))}
+                              />
+                            </label>
+                            <label className="field-block">
+                              <span>תאריך לקיחה</span>
+                              <input
+                                type="date"
+                                value={editLoanForm.takenDate}
+                                onChange={(e) => setEditLoanForm((f) => ({ ...f, takenDate: e.target.value }))}
+                              />
+                            </label>
+                            <label className="field-block">
+                              <span>יום ירידה חודשי</span>
+                              <input
+                                type="number"
+                                min="1"
+                                max="31"
+                                value={editLoanForm.monthlyDueDay}
+                                onChange={(e) => setEditLoanForm((f) => ({ ...f, monthlyDueDay: e.target.value }))}
+                              />
+                            </label>
+                            <label className="field-block full-width">
+                              <span>הערות</span>
+                              <textarea
+                                rows={2}
+                                value={editLoanForm.notes}
+                                onChange={(e) => setEditLoanForm((f) => ({ ...f, notes: e.target.value }))}
+                              />
+                            </label>
+                          </div>
+                          <div className="loan-form-actions">
+                            <button
+                              type="button"
+                              className="primary-button"
+                              onClick={() => handleSaveEditLoan(loan)}
+                            >
+                              שמירה
+                            </button>
+                            <button
+                              type="button"
+                              className="ghost-button"
+                              onClick={() => setEditingLoanId(null)}
+                            >
+                              ביטול
+                            </button>
+                          </div>
+                        </div>
+                      ) : expandedLoans[loan.id] ? (
                         <dl className="loan-details">
                           <div>
                             <dt>סכום הלוואה מקורי</dt>

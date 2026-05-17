@@ -43,7 +43,7 @@ export default function RegisterPage({ onLogin, onGoLogin }: Props) {
     setError('');
     setLoading(true);
     try {
-      const res = await registerSendOtp(email.trim(), name.trim());
+      const res = await registerSendOtp(email.trim().toLowerCase(), name.trim());
       setDevCode(res.dev_code ?? '');
       setResendCooldown(RESEND_COOLDOWN_SECS);
       setStep('code');
@@ -58,9 +58,7 @@ export default function RegisterPage({ onLogin, onGoLogin }: Props) {
     setError('');
     setLoading(true);
     try {
-      const res = await registerSendOtp(email.trim(), name.trim());
-      setDevCode(res.dev_code ?? '');
-      setSecsLeft(OTP_VALID_SECS);
+      const res = await registerSendOtp(email.trim().toLowerCase(), name.trim());
       setResendCooldown(RESEND_COOLDOWN_SECS);
       setCode('');
     } catch (err) {
@@ -75,7 +73,7 @@ export default function RegisterPage({ onLogin, onGoLogin }: Props) {
     setError('');
     setLoading(true);
     try {
-      const res = await registerVerify(email.trim(), code.trim(), name.trim());
+      const res = await registerVerify(email.trim().toLowerCase(), code.trim(), name.trim());
       const user: AuthUser = {
         userId: res.user_id,
         email: res.email,

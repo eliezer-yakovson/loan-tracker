@@ -42,10 +42,7 @@ export default function ForgotPasswordPage({ onLogin, onGoLogin }: Props) {
     setError('');
     setLoading(true);
     try {
-      const res = await resetSendOtp(email.trim());
-      setDevCode(res.dev_code ?? '');
-      setResendCooldown(RESEND_COOLDOWN_SECS);
-      setStep('code');
+      const res = await resetSendOtp(email.trim().toLowerCase());
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -57,9 +54,7 @@ export default function ForgotPasswordPage({ onLogin, onGoLogin }: Props) {
     setError('');
     setLoading(true);
     try {
-      const res = await resetSendOtp(email.trim());
-      setDevCode(res.dev_code ?? '');
-      setSecsLeft(OTP_VALID_SECS);
+      const res = await resetSendOtp(email.trim().toLowerCase());
       setResendCooldown(RESEND_COOLDOWN_SECS);
       setCode('');
     } catch (err) {
@@ -74,7 +69,7 @@ export default function ForgotPasswordPage({ onLogin, onGoLogin }: Props) {
     setError('');
     setLoading(true);
     try {
-      const res = await resetVerify(email.trim(), code.trim());
+      const res = await resetVerify(email.trim().toLowerCase(), code.trim());
       const user: AuthUser = {
         userId: res.user_id,
         email: res.email,

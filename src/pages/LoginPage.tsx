@@ -43,10 +43,7 @@ export default function LoginPage({ onLogin, onGoRegister, onGoForgot }: Props) 
     setError('');
     setLoading(true);
     try {
-      const res = await loginSendOtp(email.trim());
-      setDevCode(res.dev_code ?? '');
-      setResendCooldown(RESEND_COOLDOWN_SECS);
-      setStep('code');
+      const res = await loginSendOtp(email.trim().toLowerCase());
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -58,7 +55,7 @@ export default function LoginPage({ onLogin, onGoRegister, onGoForgot }: Props) 
     setError('');
     setLoading(true);
     try {
-      const res = await loginSendOtp(email.trim());
+      const res = await loginSendOtp(email.trim().toLowerCase());
       setDevCode(res.dev_code ?? '');
       setSecsLeft(OTP_VALID_SECS);
       setResendCooldown(RESEND_COOLDOWN_SECS);
@@ -75,7 +72,7 @@ export default function LoginPage({ onLogin, onGoRegister, onGoForgot }: Props) 
     setError('');
     setLoading(true);
     try {
-      const res = await loginVerify(email.trim(), code.trim());
+      const res = await loginVerify(email.trim().toLowerCase(), code.trim());
       const user: AuthUser = {
         userId: res.user_id,
         email: res.email,

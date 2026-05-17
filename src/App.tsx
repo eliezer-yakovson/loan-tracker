@@ -22,6 +22,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import UserDashboardPage from './pages/UserDashboardPage';
 import AdminPage from './pages/AdminPage';
 import ErrorLogPage from './pages/ErrorLogPage';
+import AboutPage from './pages/AboutPage';
 
 function LoanTrackerLogo() {
   return (
@@ -77,6 +78,7 @@ export default function App() {
     pathname.startsWith('/history') ? 'history' :
     pathname.startsWith('/admin') ? 'admin' :
     pathname.startsWith('/errors') ? 'errors' :
+    pathname.startsWith('/about') ? 'about' :
     pathname.startsWith('/user') ? 'user' : 'dashboard';
 
   const historyLoanId = pathname.startsWith('/history/')
@@ -302,6 +304,7 @@ export default function App() {
               🛡 אדמין
             </button>
           )}
+          {authUser.isAdmin && (
           <button
             type="button"
             role="tab"
@@ -311,6 +314,17 @@ export default function App() {
             title="לוג שגיאות"
           >
             ⚠️ שגיאות
+          </button>
+          )}
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activePage === 'about'}
+            className={activePage === 'about' ? 'nav-tab active' : 'nav-tab'}
+            onClick={() => { setActivePage('about'); setMenuOpen(false); }}
+            title="אודות"
+          >
+            ℹ️ אודות
           </button>
         </div>
       </nav>
@@ -360,7 +374,8 @@ export default function App() {
           />
         )}
 
-        {activePage === 'errors' && <ErrorLogPage />}
+        {activePage === 'errors' && authUser.isAdmin && <ErrorLogPage />}
+        {activePage === 'about' && <AboutPage />}
 
         {activePage === 'history' && (
           <HistoryPage
