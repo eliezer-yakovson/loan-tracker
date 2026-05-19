@@ -444,8 +444,6 @@ export default function App() {
         )}
       </main>
 
-      {/* ג”€ג”€ Mobile bottom navigation ג”€ג”€ */}
-      </main>
     </div>
   );
 }
