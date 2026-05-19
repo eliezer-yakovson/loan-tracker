@@ -68,10 +68,6 @@ export default function UserDashboardPage({ user, state, onLogout }: Props) {
             <dt>מייל</dt>
             <dd dir="ltr">{user.email}</dd>
           </div>
-          <div>
-            <dt>מזהה</dt>
-            <dd dir="ltr" style={{ fontSize: '0.82rem', color: '#8a9fa5' }}>{user.userId}</dd>
-          </div>
         </dl>
       </div>
 

@@ -1,41 +1,92 @@
+const features = [
+  {
+    icon: '📊',
+    title: 'לוח חודשי ברור',
+    desc: 'כל ההלוואות שלך מסודרות בטבלה אחת — ראה בבת אחת כמה משלמים, לאיזה גורם ומתי.',
+  },
+  {
+    icon: '✅',
+    title: 'סימון תשלום שבוצע',
+    desc: 'אישרת תשלום? לחיצה אחת הופכת אותו לירוק. הנתון נשמר לחודש הבא אוטומטית.',
+  },
+  {
+    icon: '📅',
+    title: 'היסטוריה מלאה',
+    desc: 'גלול אחורה לכל חודש שעבר וראה בדיוק כמה שילמת, גם אחרי שינויים.',
+  },
+  {
+    icon: '❄️',
+    title: 'הקפאת הלוואה',
+    desc: 'לא משלם חודש? הקפא את ההלוואה והיא לא תופיע בלוח עד שתחזיר אותה.',
+  },
+  {
+    icon: '🏦',
+    title: 'קטגוריות גמישות',
+    desc: 'צור קטגוריות לבנקים, לגורמים פרטיים או לכל מקור אחר — לפי הצורך שלך.',
+  },
+  {
+    icon: '🔐',
+    title: 'כניסה מאובטחת ללא סיסמה',
+    desc: 'מקבל קוד חד-פעמי למייל בכל כניסה. אין מה לזכור, אין מה לשכוח.',
+  },
+];
+
 export default function AboutPage() {
   return (
-    <section className="about-page card" style={{ maxWidth: 600, margin: '0 auto', padding: '2rem' }}>
-      <h1 style={{ marginBottom: '0.5rem' }}>מעקב הלוואות &#8362;</h1>
-      <p className="eyebrow" style={{ marginBottom: '1.5rem' }}>אפליקציה לניהול הלוואות חודשי</p>
+    <section style={{ maxWidth: 680, margin: '0 auto', padding: '0 0 2rem' }}>
 
-      <dl className="loan-details" style={{ marginBottom: '1.5rem' }}>
-        <div>
-          <dt>גרסה</dt>
-          <dd>1.0.0</dd>
-        </div>
-        <div>
-          <dt>טכנולוגיות</dt>
-          <dd>React · TypeScript · Vite · FastAPI · PostgreSQL</dd>
-        </div>
-        <div>
-          <dt>אחסון</dt>
-          <dd>Vercel (Frontend) · Hugging Face Spaces (Backend) · Neon PostgreSQL (DB)</dd>
-        </div>
-        <div>
-          <dt>כניסה</dt>
-          <dd>אימות בקוד חד-פעמי (OTP) למייל — ללא סיסמאות</dd>
-        </div>
-      </dl>
+      {/* Hero */}
+      <div className="card" style={{
+        background: 'linear-gradient(135deg, #0c5561 0%, #22b8c2 100%)',
+        borderRadius: 20,
+        padding: '2.5rem 2rem',
+        textAlign: 'center',
+        marginBottom: '1.5rem',
+        color: '#fff',
+      }}>
+        <div style={{ fontSize: '3.2rem', marginBottom: '0.5rem' }}>₪</div>
+        <h1 style={{ margin: '0 0 0.4rem', fontSize: '1.8rem', fontWeight: 800 }}>מעקב הלוואות</h1>
+        <p style={{ margin: 0, opacity: 0.85, fontSize: '1.05rem' }}>
+          כלי אישי לניהול כל ההלוואות שלך במקום אחד
+        </p>
+      </div>
 
-      <h2 style={{ fontSize: '1rem', marginBottom: '0.75rem' }}>מה האפליקציה עושה?</h2>
-      <ul style={{ paddingRight: '1.2rem', lineHeight: 1.8, color: '#3a5a62' }}>
-        <li>מעקב חודשי אחר הלוואות לפי קטגוריות (בנקים, גורמים פרטיים וכד')</li>
-        <li>תצוגת לוח עם חיוב חודשי, מספר תשלום נוכחי ויתרת תשלומים</li>
-        <li>אישור תשלומים כ"ירוק" לאחר ביצוע</li>
-        <li>היסטוריה חודשית מלאה</li>
-        <li>הקפאת הלוואות זמנית</li>
-        <li>תמיכה בריבוי משתמשים עם בידוד מלא בין חשבונות</li>
-      </ul>
+      {/* What is it */}
+      <div className="card" style={{ marginBottom: '1.5rem', padding: '1.5rem 1.75rem' }}>
+        <h2 style={{ margin: '0 0 0.75rem', fontSize: '1.1rem', color: '#0c5561' }}>למה זה קיים?</h2>
+        <p style={{ margin: 0, lineHeight: 1.8, color: '#3a5a62' }}>
+          כשיש כמה הלוואות בו-זמנית — לבנק, לבן משפחה, לחברת ביטוח — קשה לעקוב מי שולם,
+          כמה נשאר ומתי מסיימים. האפליקציה הזו נותנת תמונה שלמה בלוח אחד, חודש אחר חודש,
+          בלי גיליונות אקסל ובלי לנחש.
+        </p>
+      </div>
 
-      <p style={{ marginTop: '2rem', color: '#aaa', fontSize: '0.8rem', textAlign: 'center' }}>
-        פותח עם ♥ · כל הנתונים שמורים בענן ומאובטחים
-      </p>
+      {/* Features grid */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+        gap: '1rem',
+        marginBottom: '1.5rem',
+      }}>
+        {features.map((f) => (
+          <div key={f.title} className="card" style={{ padding: '1.25rem 1.5rem', display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+            <span style={{ fontSize: '1.8rem', lineHeight: 1, flexShrink: 0 }}>{f.icon}</span>
+            <div>
+              <strong style={{ display: 'block', color: '#0c5561', marginBottom: '0.3rem' }}>{f.title}</strong>
+              <span style={{ color: '#62757b', fontSize: '0.92rem', lineHeight: 1.6 }}>{f.desc}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Footer note */}
+      <div className="card" style={{ padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+        <span style={{ color: '#62757b', fontSize: '0.88rem' }}>
+          הנתונים שלך שמורים בענן ומאובטחים — נגישים מכל מכשיר
+        </span>
+        <span style={{ color: '#aaa', fontSize: '0.82rem', flexShrink: 0 }}>גרסה 1.0</span>
+      </div>
+
     </section>
   );
 }

@@ -56,6 +56,7 @@ export default function App() {
   const syncReady = useRef(false);   // initial pull has completed
   const apiOnline = useRef(false);   // pull succeeded at least once
   const justPulled = useRef(false);  // skip push right after a pull
+  const latestStateRef = useRef(state); // always holds the latest state for pull conflict detection
 
   // Pull full state from API whenever the authenticated user changes (login / session restore).
   // Skipped entirely when there is no session — no point hitting an auth-guarded endpoint.
@@ -69,14 +70,40 @@ export default function App() {
     // Reset flags so we don't push stale data while the pull is in flight.
     syncReady.current = false;
     apiOnline.current = false;
-    pullState(state.selectedMonth)
-      .then((apiState) => {
-        apiOnline.current = true;
-        justPulled.current = true;
-        setState(ensureMonthEntries(apiState, apiState.selectedMonth));
-      })
-      .catch(console.error)
-      .finally(() => { syncReady.current = true; });
+
+    // Snapshot state at pull-start so we can detect user edits made in-flight.
+    const stateAtPullStart = latestStateRef.current;
+    let cancelled = false;
+
+    const attemptPull = async () => {
+      const MAX_RETRIES = 3;
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        if (cancelled) return;
+        try {
+          const apiState = await pullState(latestStateRef.current.selectedMonth);
+          if (cancelled) return;
+          apiOnline.current = true;
+          if (latestStateRef.current !== stateAtPullStart) {
+            // The user edited data while the pull was in-flight.
+            // Keep their local changes; the push effect will sync them to the server.
+          } else {
+            justPulled.current = true;
+            setState(ensureMonthEntries(apiState, apiState.selectedMonth));
+          }
+          return;
+        } catch (err) {
+          if (cancelled) return;
+          console.error(err);
+          if (attempt < MAX_RETRIES) {
+            // Wait 3 s before the next attempt.
+            await new Promise<void>(resolve => setTimeout(resolve, 3_000));
+          }
+        }
+      }
+    };
+
+    attemptPull().finally(() => { if (!cancelled) syncReady.current = true; });
+    return () => { cancelled = true; };
   // authUser.userId triggers a fresh pull on every login, not just on mount.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authUser?.userId]);
@@ -101,6 +128,8 @@ export default function App() {
   }
 
   useEffect(() => {
+    // Always track the latest state for pull-vs-local conflict detection.
+    latestStateRef.current = state;
     // Always keep localStorage in sync as a fallback
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 
@@ -416,40 +445,7 @@ export default function App() {
       </main>
 
       {/* ג”€ג”€ Mobile bottom navigation ג”€ג”€ */}
-      <nav className="mobile-bottom-nav" aria-label="ניווט ראשי">
-        <button
-          type="button"
-          className={activePage === 'dashboard' ? 'mobile-nav-btn active' : 'mobile-nav-btn'}
-          onClick={() => setActivePage('dashboard')}
-        >
-          <span className="mobile-nav-icon" aria-hidden="true">🏠</span>
-          <span className="mobile-nav-label">סיכום</span>
-        </button>
-        <button
-          type="button"
-          className={activePage === 'loans' ? 'mobile-nav-btn active' : 'mobile-nav-btn'}
-          onClick={() => setActivePage('loans')}
-        >
-          <span className="mobile-nav-icon" aria-hidden="true">💳</span>
-          <span className="mobile-nav-label">הלוואות</span>
-        </button>
-        <button
-          type="button"
-          className={activePage === 'history' ? 'mobile-nav-btn active' : 'mobile-nav-btn'}
-          onClick={() => setActivePage('history')}
-        >
-          <span className="mobile-nav-icon" aria-hidden="true">📅</span>
-          <span className="mobile-nav-label">היסטוריה</span>
-        </button>
-        <button
-          type="button"
-          className={activePage === 'manage' ? 'mobile-nav-btn active' : 'mobile-nav-btn'}
-          onClick={() => setActivePage('manage')}
-        >
-          <span className="mobile-nav-icon" aria-hidden="true">⚙️</span>
-          <span className="mobile-nav-label">ניהול</span>
-        </button>
-      </nav>
+      </main>
     </div>
   );
 }

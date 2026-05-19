@@ -10,7 +10,7 @@ export interface ErrorLogEntry {
 }
 
 function authHeader(): Record<string, string> {
-  const token = localStorage.getItem('auth_token');
+  const token = sessionStorage.getItem('auth_token');
   return token
     ? { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
     : { 'Content-Type': 'application/json' };
@@ -21,7 +21,7 @@ export async function logError(
   message: string,
   details: unknown = '',
 ): Promise<void> {
-  const token = localStorage.getItem('auth_token');
+  const token = sessionStorage.getItem('auth_token');
   if (!token) return; // not logged in, can't log
   try {
     await fetch(`${API_BASE}/errors/`, {
