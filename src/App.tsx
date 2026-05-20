@@ -23,6 +23,7 @@ import UserDashboardPage from './pages/UserDashboardPage';
 import AdminPage from './pages/AdminPage';
 import ErrorLogPage from './pages/ErrorLogPage';
 import AboutPage from './pages/AboutPage';
+import ChartsPage from './pages/ChartsPage';
 
 function LoanTrackerLogo() {
   return (
@@ -114,6 +115,7 @@ export default function App() {
     pathname.startsWith('/loans') ? 'loans' :
     pathname.startsWith('/manage') ? 'manage' :
     pathname.startsWith('/history') ? 'history' :
+    pathname.startsWith('/charts') ? 'charts' :
     pathname.startsWith('/admin') ? 'admin' :
     pathname.startsWith('/errors') ? 'errors' :
     pathname.startsWith('/about') ? 'about' :
@@ -327,7 +329,7 @@ export default function App() {
         </button>
 
         <div className={menuOpen ? 'nav-tabs nav-tabs--open' : 'nav-tabs'} role="tablist">
-          {(['dashboard', 'loans', 'history', 'manage'] as Page[]).map((page) => (
+          {(['dashboard', 'loans', 'history', 'charts', 'manage'] as Page[]).map((page) => (
             <button
               key={page}
               type="button"
@@ -336,7 +338,7 @@ export default function App() {
               className={activePage === page ? 'nav-tab active' : 'nav-tab'}
               onClick={() => { setActivePage(page); setMenuOpen(false); }}
             >
-              {page === 'dashboard' ? 'סיכום' : page === 'loans' ? 'הלוואות' : page === 'history' ? 'היסטוריה' : 'ניהול'}
+              {page === 'dashboard' ? 'סיכום' : page === 'loans' ? 'הלוואות' : page === 'history' ? 'היסטוריה' : page === 'charts' ? '📊 גרפים' : 'ניהול'}
             </button>
           ))}
           <button
@@ -431,6 +433,12 @@ export default function App() {
           />
         )}
 
+        {activePage === 'charts' && (
+          <ChartsPage
+            state={state}
+            onNavigateManage={() => setActivePage('manage')}
+          />
+        )}
         {activePage === 'errors' && authUser.isAdmin && <ErrorLogPage />}
         {activePage === 'about' && <AboutPage />}
 

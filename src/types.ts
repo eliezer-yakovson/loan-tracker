@@ -1,4 +1,4 @@
-export type Page = 'dashboard' | 'loans' | 'manage' | 'history' | 'user' | 'admin' | 'errors' | 'about';
+export type Page = 'dashboard' | 'loans' | 'manage' | 'history' | 'charts' | 'user' | 'admin' | 'errors' | 'about';
 
 export type AuthUser = {
   userId: string;
