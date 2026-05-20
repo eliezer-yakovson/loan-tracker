@@ -1,6 +1,5 @@
 frontend/node_modules
 frontend/dist
-backend/__pycache__
-backend/.venv
-backend/app/__pycache__
-backend/**/__pycache__
+backend/
+.vite/
+package-lock.json
