@@ -1,0 +1,6 @@
+- This project is a Vite + React + TypeScript app for monthly loan tracking.
+- Keep the interface in Hebrew with right-to-left layout.
+- Categories are dynamic columns representing banks or any custom loan source.
+- New month entries should copy the previous month and start as pending until confirmed or edited.
+- Persist all data locally in browser storage unless the user asks for server sync.
+- Keep summaries clear for category totals, overall totals, and due dates within the month.
