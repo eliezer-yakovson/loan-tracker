@@ -17,6 +17,7 @@ interface Props {
 export default function RegisterPage({ onLogin, onGoLogin }: Props) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
   const [step, setStep] = useState<'form' | 'code'>('form');
   const [loading, setLoading] = useState(false);
@@ -41,6 +42,10 @@ export default function RegisterPage({ onLogin, onGoLogin }: Props) {
   async function handleSendOtp(e: FormEvent) {
     e.preventDefault();
     setError('');
+    if (password && password.length < 8) {
+      setError('סיסמה חייבת להכיל לפחות 8 תווים');
+      return;
+    }
     setLoading(true);
     try {
       const res = await registerSendOtp(email.trim().toLowerCase(), name.trim());
@@ -73,7 +78,12 @@ export default function RegisterPage({ onLogin, onGoLogin }: Props) {
     setError('');
     setLoading(true);
     try {
-      const res = await registerVerify(email.trim().toLowerCase(), code.trim(), name.trim());
+      const res = await registerVerify(
+        email.trim().toLowerCase(),
+        code.trim(),
+        name.trim(),
+        password || undefined,
+      );
       const user: AuthUser = {
         userId: res.user_id,
         email: res.email,
@@ -138,6 +148,18 @@ export default function RegisterPage({ onLogin, onGoLogin }: Props) {
                 placeholder="your@email.com"
                 required
                 dir="ltr"
+              />
+            </label>
+            <label className="field-block">
+              <span>סיסמה (אופציונלי — לכניסה מהירה)</span>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="לפחות 8 תווים"
+                minLength={8}
+                dir="ltr"
+                autoComplete="new-password"
               />
             </label>
             <button type="submit" className="primary-button auth-submit" disabled={loading}>

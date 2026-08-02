@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useState } from 'react';
-import { loginSendOtp, loginVerify, saveSession } from '../authApi';
+import { loginSendOtp, loginVerify, loginPassword, saveSession } from '../authApi';
 import type { AuthUser } from '../types';
 
 const OTP_VALID_SECS = 600;
@@ -16,14 +16,57 @@ interface Props {
 }
 
 export default function LoginPage({ onLogin, onGoRegister, onGoForgot }: Props) {
+  const [mode, setMode] = useState<'otp' | 'password'>('otp');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
+  const [password, setPassword] = useState('');
   const [step, setStep] = useState<'email' | 'code'>('email');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [devCode, setDevCode] = useState('');
   const [secsLeft, setSecsLeft] = useState(OTP_VALID_SECS);
   const [resendCooldown, setResendCooldown] = useState(0);
+
+  function switchMode(next: 'otp' | 'password') {
+    setMode(next);
+    setError('');
+    setCode('');
+    setPassword('');
+    setDevCode('');
+    setStep('email');
+  }
+
+  function finishLogin(res: {
+    user_id: string;
+    email: string;
+    name: string;
+    access_token: string;
+    is_admin: boolean;
+  }) {
+    const user: AuthUser = {
+      userId: res.user_id,
+      email: res.email,
+      name: res.name,
+      token: res.access_token,
+      isAdmin: res.is_admin,
+    };
+    saveSession(res.access_token, user);
+    onLogin(user);
+  }
+
+  async function handlePasswordLogin(e: FormEvent) {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const res = await loginPassword(email.trim().toLowerCase(), password);
+      finishLogin(res);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
     if (step !== 'code') return;
@@ -76,15 +119,7 @@ export default function LoginPage({ onLogin, onGoRegister, onGoForgot }: Props) 
     setLoading(true);
     try {
       const res = await loginVerify(email.trim().toLowerCase(), code.trim());
-      const user: AuthUser = {
-        userId: res.user_id,
-        email: res.email,
-        name: res.name,
-        token: res.access_token,
-        isAdmin: res.is_admin,
-      };
-      saveSession(res.access_token, user);
-      onLogin(user);
+      finishLogin(res);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -114,11 +149,68 @@ export default function LoginPage({ onLogin, onGoRegister, onGoForgot }: Props) 
         </div>
 
         <h1 className="auth-title">כניסה לחשבון</h1>
-        <p className="auth-subtitle">נשלח קוד אימות למייל שלך</p>
+        <p className="auth-subtitle">
+          {mode === 'otp' ? 'נשלח קוד אימות למייל שלך' : 'התחבר עם המייל והסיסמה שלך'}
+        </p>
+
+        <div className="auth-mode-toggle" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === 'otp'}
+            className={mode === 'otp' ? 'auth-mode-btn active' : 'auth-mode-btn'}
+            onClick={() => switchMode('otp')}
+          >
+            קוד למייל
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === 'password'}
+            className={mode === 'password' ? 'auth-mode-btn active' : 'auth-mode-btn'}
+            onClick={() => switchMode('password')}
+          >
+            קוד וסיסמה
+          </button>
+        </div>
 
         {error && <div className="auth-error">{error}</div>}
 
-        {step === 'email' ? (
+        {mode === 'password' ? (
+          <form onSubmit={handlePasswordLogin} className="auth-form">
+            <label className="field-block">
+              <span>כתובת מייל</span>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="your@email.com"
+                required
+                autoFocus
+                dir="ltr"
+                autoComplete="username"
+              />
+            </label>
+            <label className="field-block">
+              <span>סיסמה</span>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+                dir="ltr"
+                autoComplete="current-password"
+              />
+            </label>
+            <button type="submit" className="primary-button auth-submit" disabled={loading}>
+              {loading ? 'מתחבר...' : 'כניסה לחשבון'}
+            </button>
+            <p className="auth-hint" style={{ marginTop: '0.5rem' }}>
+              עדיין אין לך סיסמה? התחבר עם <button type="button" className="link-btn" onClick={() => switchMode('otp')}>קוד למייל</button> והגדר סיסמה במסך "המשתמש שלי".
+            </p>
+          </form>
+        ) : step === 'email' ? (
           <form onSubmit={handleSendOtp} className="auth-form">
             <label className="field-block">
               <span>כתובת מייל</span>

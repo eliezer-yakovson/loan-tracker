@@ -11,17 +11,55 @@ export interface TokenResponse {
   is_admin: boolean;
 }
 
+// The API is hosted on a Hugging Face Space that sleeps when idle. The first
+// request after idle can return 502/503/504 for a few seconds while it wakes up.
+// We transparently retry those so the user isn't blocked by a transient error.
+const WAKEUP_STATUSES = new Set([502, 503, 504]);
+const MAX_WAKEUP_RETRIES = 4;
+const WAKEUP_RETRY_DELAY_MS = 2500;
+
+function sleep(ms: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
+
 async function authFetch<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error((data as { detail?: string }).detail ?? `שגיאה ${res.status}`);
+  let lastStatus = 0;
+  for (let attempt = 0; attempt <= MAX_WAKEUP_RETRIES; attempt++) {
+    let res: Response;
+    try {
+      res = await fetch(`${API_BASE}${path}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+    } catch {
+      // Network error (server unreachable / still booting) — retry a few times.
+      lastStatus = 0;
+      if (attempt < MAX_WAKEUP_RETRIES) {
+        await sleep(WAKEUP_RETRY_DELAY_MS);
+        continue;
+      }
+      throw new Error('לא ניתן להתחבר לשרת. בדוק את החיבור לאינטרנט ונסה שוב.');
+    }
+
+    if (WAKEUP_STATUSES.has(res.status)) {
+      // Server is waking up — wait and retry.
+      lastStatus = res.status;
+      if (attempt < MAX_WAKEUP_RETRIES) {
+        await sleep(WAKEUP_RETRY_DELAY_MS);
+        continue;
+      }
+      throw new Error('השרת מתעורר כרגע (שגיאה ' + res.status + '). המתן מספר שניות ונסה שוב.');
+    }
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error((data as { detail?: string }).detail ?? `שגיאה ${res.status}`);
+    }
+    return data as T;
   }
-  return data as T;
+  // Unreachable in practice, but keeps TypeScript happy.
+  throw new Error('השרת אינו זמין כרגע (שגיאה ' + lastStatus + '). נסה שוב מאוחר יותר.');
 }
 
 // ── Register ──────────────────────────────────────────────────────────────────
@@ -34,8 +72,11 @@ export async function registerVerify(
   email: string,
   code: string,
   name: string,
+  password?: string,
 ): Promise<TokenResponse> {
-  return authFetch('/auth/register/verify', { email, code, name });
+  const body: Record<string, unknown> = { email, code, name };
+  if (password) body.password = password;
+  return authFetch('/auth/register/verify', body);
 }
 
 // ── Login ─────────────────────────────────────────────────────────────────────
@@ -46,6 +87,25 @@ export async function loginSendOtp(email: string): Promise<{ dev_code?: string }
 
 export async function loginVerify(email: string, code: string): Promise<TokenResponse> {
   return authFetch('/auth/login/verify', { email, code, purpose: 'login' });
+}
+
+// Login with email + password (no OTP).
+export async function loginPassword(email: string, password: string): Promise<TokenResponse> {
+  return authFetch('/auth/login/password', { email, password });
+}
+
+// Set or change the password for the currently logged-in user.
+export async function setPassword(token: string, password: string): Promise<{ detail: string }> {
+  const res = await fetch(`${API_BASE}/auth/set-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ password }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error((data as { detail?: string }).detail ?? `שגיאה ${res.status}`);
+  }
+  return data as { detail: string };
 }
 
 // ── Reset / Forgot ────────────────────────────────────────────────────────────
