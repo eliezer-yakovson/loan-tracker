@@ -155,12 +155,15 @@ export async function pullState(selectedMonth: string): Promise<AppState> {
   }
 }
 
-export async function pushState(state: AppState): Promise<void> {
+export async function pushState(state: AppState, opts?: { keepalive?: boolean }): Promise<void> {
   try {
     const res = await fetch(`${API_BASE}/sync`, {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify(appStateToApiStateIn(state)),
+      // keepalive lets the request finish even if the page is being unloaded
+      // (tab closed / app backgrounded), so last-second edits still get saved.
+      keepalive: opts?.keepalive,
     });
     if (!res.ok) {
       const err = `Push failed: ${res.status}`;

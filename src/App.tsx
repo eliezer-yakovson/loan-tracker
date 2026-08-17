@@ -58,6 +58,7 @@ export default function App() {
   const apiOnline = useRef(false);   // pull succeeded at least once
   const justPulled = useRef(false);  // skip push right after a pull
   const latestStateRef = useRef(state); // always holds the latest state for pull conflict detection
+  const pendingPush = useRef(false); // true when local changes have not yet been pushed
 
   // Pull full state from API whenever the authenticated user changes (login / session restore).
   // Skipped entirely when there is no session — no point hitting an auth-guarded endpoint.
@@ -142,11 +143,38 @@ export default function App() {
     // Don't push when offline
     if (!apiOnline.current) return;
 
+    // Mark that there are unsynced changes immediately (not only when the
+    // debounced push fires) so an exit within the debounce window can flush them.
+    pendingPush.current = true;
     const timer = setTimeout(() => {
-      pushState(state).catch(console.error);
+      pushState(state)
+        .then(() => { pendingPush.current = false; })
+        .catch(console.error);
     }, 500);
     return () => clearTimeout(timer);
   }, [state]);
+
+  // Flush unsynced changes when the page is hidden or closed (tab close, mobile
+  // app backgrounding). Uses a keepalive request so it completes during unload —
+  // this prevents losing an edit made right before exiting (e.g. a confirmation).
+  useEffect(() => {
+    function flush() {
+      if (!authUser) return;
+      if (!syncReady.current || !apiOnline.current) return;
+      if (!pendingPush.current) return;
+      pendingPush.current = false;
+      pushState(latestStateRef.current, { keepalive: true }).catch(() => {});
+    }
+    function onVisibilityChange() {
+      if (document.visibilityState === 'hidden') flush();
+    }
+    window.addEventListener('pagehide', flush);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, [authUser]);
 
   function handleSelectMonth(monthKey: string) {
     setState((s) => ensureMonthEntries(s, monthKey));
