@@ -25,6 +25,10 @@ import ErrorLogPage from './pages/ErrorLogPage';
 import AboutPage from './pages/AboutPage';
 import ChartsPage from './pages/ChartsPage';
 
+// localStorage marker: set when local state has changes not yet confirmed as
+// saved to the server. On startup, its presence makes local changes win.
+const PENDING_SYNC_KEY = 'pending_sync';
+
 function LoanTrackerLogo() {
   return (
     <svg width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -82,6 +86,18 @@ export default function App() {
       for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         if (cancelled) return;
         try {
+          // If there are local edits from a previous session that never reached
+          // the server (e.g. app closed offline), push them up FIRST so they win,
+          // instead of pulling and overwriting them. This prevents data loss.
+          if (window.localStorage.getItem(PENDING_SYNC_KEY) === '1') {
+            await pushState(latestStateRef.current);
+            if (cancelled) return;
+            apiOnline.current = true;
+            pendingPush.current = false;
+            window.localStorage.removeItem(PENDING_SYNC_KEY);
+            return; // keep local state — it is now the source of truth on the server
+          }
+
           const apiState = await pullState(latestStateRef.current.selectedMonth);
           if (cancelled) return;
           apiOnline.current = true;
@@ -140,15 +156,23 @@ export default function App() {
     if (!syncReady.current) return;
     // Don't push back data we just pulled from the API
     if (justPulled.current) { justPulled.current = false; return; }
-    // Don't push when offline
+
+    // This is a genuine user change. Persist a "needs sync" marker so that even
+    // if the app closes (or is offline) before the push completes, the next
+    // startup pushes local changes up instead of overwriting them from the server.
+    pendingPush.current = true;
+    window.localStorage.setItem(PENDING_SYNC_KEY, '1');
+
+    // Don't push over the network when offline — the marker above keeps the
+    // change safe locally and it will be synced on the next successful startup.
     if (!apiOnline.current) return;
 
-    // Mark that there are unsynced changes immediately (not only when the
-    // debounced push fires) so an exit within the debounce window can flush them.
-    pendingPush.current = true;
     const timer = setTimeout(() => {
       pushState(state)
-        .then(() => { pendingPush.current = false; })
+        .then(() => {
+          pendingPush.current = false;
+          window.localStorage.removeItem(PENDING_SYNC_KEY);
+        })
         .catch(console.error);
     }, 500);
     return () => clearTimeout(timer);
@@ -286,6 +310,10 @@ export default function App() {
     // Clear the cached financial data so a different user logging in on the same
     // device cannot see a previous user's data even briefly before the pull completes.
     window.localStorage.removeItem(STORAGE_KEY);
+    // Clear the pending-sync marker too, so a stale marker from this user cannot
+    // cause the next user's (empty) local state to be pushed over their server data.
+    window.localStorage.removeItem(PENDING_SYNC_KEY);
+    pendingPush.current = false;
     clearSession();
     setState(loadState()); // returns empty initial state now that STORAGE_KEY is gone
     setAuthUser(null);
